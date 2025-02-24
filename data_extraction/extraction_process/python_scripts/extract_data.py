@@ -20,7 +20,7 @@ def save_as_json(data, departement_name, num):
         separate_paragraphs = []
 
         for key, value in data.items():
-            if key.lower() != 'meeting_subject' and key.lower() != 'meeting_info':
+            if key.lower() != 'meeting_subject' and key.lower() != 'meeting_info' and key.lower() != 'departement_info' and key.lower() != 'participants_info':
                 whole_text += value
                 whole_text += " "
 
@@ -33,16 +33,23 @@ def save_as_json(data, departement_name, num):
 
                 separate_paragraphs.append(paragraph)
 
+
         separate_sentences = get_sentences(whole_text)
 
         whole_text_with_label = {
             data['meeting_subject']: whole_text
         }
 
-        
-    
+        data_for_vector_db = {
+            "whole_text": whole_text_with_label,
+            "paragraphs": separate_paragraphs,
+            "sentences": separate_sentences,
+            "persons_info": data["participants_info"],
+            "meeting_data": data["meeting_info"]
+        }
+
     except Exception as e:
-        return "Exception occured when parsing json data: " + e
+        return "Exception occured when parsing json data: ", e
 
 
     try:

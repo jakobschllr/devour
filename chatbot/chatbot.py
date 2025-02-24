@@ -70,7 +70,6 @@ class Chat:
             return "Dazu kann ich leider nichts sagen."
         
     def get_db_query(self, input, conversation_until_now):
-
         prompt = f"""
         Erstelle aus der gegebenen Eingabe und den Kontextinformationen Eingabe aus wenigen prägnanten Schlüsselwörtern, der als Input in eine Vektor-Datenbank gegeben werden kann, sodass die relevanten
         Informationen abgerufen werden können, die der Nutzer mit seiner Eingabe vermutlich haben wollte.

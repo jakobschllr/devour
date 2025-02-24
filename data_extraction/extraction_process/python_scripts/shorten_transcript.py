@@ -2,6 +2,9 @@ import ollama
 import requests
 import json
 import os
+from dotenv import load_dotenv
+
+DEPARTEMENT = "Einkauf"
 
 def shorten_transcript(transcript_path):
 
@@ -23,22 +26,39 @@ def shorten_transcript(transcript_path):
         persönliche Meinungen und irrelevante Randinformationen sollen nicht berücksichtigt werden.
         Verwende eine sachliche, professionelle Sprache, die sich für eine strukturierte Wissensdatenbank eignet.
         
-        Die Labels sollen eindeutig auf den Inhalt des Abschnittes hinweisen, sodass man nur anhand des 
+        Dein Antwort soll einer JSON-Struktur entsprechen. Ganz am Anfang soll es einen Key geben der immer
+        "meeting_subject" heißt und dessen Value ein String ist, der in wenigen Wörten den Inhalt des gesamten Meetings beschreibt.
+
+        Danach sollst du den gesamten Fließtext in einzelne Sinnabschnitte unterteilen und jedem dieser Sinnabschnitte ein kurzes
+        prägnantes Label geben, das den jeweiligen Abschnitt beschreibt. Für jeden Abschnitt gibt es dann ein Key-Value-Paar. Das Label eines Abschnitts ist jeweils der Key und der Value
+        dazu ist der Abschnitt des Fließtextes als String. Die Labels sollen eindeutig auf den Inhalt des Abschnittes hinweisen, sodass man nur anhand des 
         Labels weiß worum es im Abschnitt geht. Die Labels werde nachher in einer Vektordatenbank darauf hinweisen, worum
         es im Abschnitt geht, daher müssen sie für sich alleine ohne Kontext anderer Labels den Inhalt des Abschnittes beschreiben.
-        Die Values sollen immer der Fließtext des Abschnittes sein als String ohne weitere Verschachtelung. Am Schluss der JSON-Datei
-        soll noch ein Key mit Informationen zum Meeting stehen. Der Key soll immer "meeting_info" heißen. Der Value immer aus zwei
-        zwei Key-Value-Paaren bestehen. Der erste Key heißt immer "date" und hat als Value immer das Datum des Meeings als String. Das
-        zweite Key-Value-Paar heißt immer "content" und der Value dazu soll ein Fließtext als String sein, der beschreibt wann das Meeting war, wer teilgenommen hat und kurz sagt welche Themen
-        besprochen wurden und welche Handlungen und Aufgaben aus dem Meeting resultieren. Ganz am Anfang soll es einen Key geben der immer
-        "meeting_subject" heißt und dessen Value ein String ist, der in wenigen Wörten den Inhalt des gesamten Meetings beschreibt.
-        Hier ist eine Vorlage für die JSON-Datei:
+        Die Values sollen immer der Fließtext des Abschnittes sein als String ohne weitere Verschachtelung.
+
+        Danach soll es immer einen Key geben, der immer "departement_info" heißt. Der dazugehörige Value kurzer Fließtext als String, der alle Informationen über die
+        Abteilung {DEPARTEMENT} nennt, die man aus dem Transkript über die Abteilung entnehmen kann.
+
+        Danach gibt es einen Key der immer "participants_info" heißt und dessen Value eine Liste ist. Die Liste soll für jeden im Meeting teilnehmenden Teilnehmer einen Text als
+        String enthalten der den Namen des Mitarbeiters nennt, was generell seine Aufgaben sind, nicht nur im Bezug auf das Meeting und was seine Position im Unternehmen ist. Falls
+        dazu keine Informationen aus dem Transkript ersichtlich sind, lasse es einfach leer.
+        
+        Am Schluss der JSON-Datei soll noch ein Key mit Informationen zum Meeting stehen. Der Key soll immer "meeting_info" heißen. Der Value immer aus zwei
+        zwei Key-Value-Paaren bestehen. Der erste Key heißt immer "date" und hat als Value immer das Wort "meeting" und das Datum des Meeings als String im Format:  Meeting vom DD.MM.YYYY DD. MONATSNAME YYYY.
+        Ist das Datum des Meetings nicht ersichtlich schreibe einfach "datum nicht bekannt".
+        Das zweite Key-Value-Paar heißt immer "content" und der Value dazu soll ein Fließtext als String sein, der beschreibt wann das Meeting war, wer teilgenommen hat
+        und kurz sagt welche Themen besprochen wurden und welche Handlungen und Aufgaben aus dem Meeting resultieren.
+        
+        
+        Hier ist die Vorlage für die JSON-Datei:
 
         {{
             "meeting_subject": "",
             "detailliertes_label_für_abschnitt": "",
             "detailliertes_label_für_abschnitt": "",
             "detailliertes_label_für_abschnitt": "",
+            "departement_info": "",
+            "participants_info": [],
             "meeting_info": {{
                 "date": "",
                 "content": "",
@@ -133,8 +153,8 @@ def shorten_transcript(transcript_path):
     # except Exception as e:
     #     print("Error: ", e)
 
-
-    GEMINI_API_KEY = os.environ['GEMINI_API_KEY']
+    load_dotenv()
+    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
