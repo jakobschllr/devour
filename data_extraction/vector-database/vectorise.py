@@ -6,11 +6,10 @@ import chromadb
 import numpy as np
 
 
-CHUNK_ID = 0
-
-# nltk.download('punkt_tab')
+CHUNK_ID = 0 # Global variable to count the Chunks and set their IDs
 
 embedding_models  = [
+    "Alibaba-NLP/gte-Qwen2-1.5B-instruct",
      "all-MiniLM-L6-v2",
      "Linq-AI-Research/Linq-Embed-Mistral",
      "Alibaba-NLP/gte-Qwen2-7B-instruct",
@@ -18,31 +17,15 @@ embedding_models  = [
      "NovaSearch/stella_en_1.5B_v5"
 ]
 
-def preprocess_summary(sentences):
-    
-    # Initialize sentence transformer model
-    model = SentenceTransformer("Linq-AI-Research/Linq-Embed-Mistral")
-    
-    # Compute embeddings for each sentence
-    embeddings = np.array(model.encode(sentences))
-    
-    # Group related sentences (simple approach using cosine similarity)
-    chunks = []
-    current_chunk = [sentences[0]]
-    for i in range(1, len(sentences)):
-        similarity = cosine_similarity([embeddings[i-1]], [embeddings[i]])[0][0]
-        if similarity > 0.8:  # Adjust threshold as needed; the higher number, the more similarities will be found.
-            current_chunk.append(sentences[i])
-        else:
-            chunks.append(' '.join(current_chunk))
-            current_chunk = [sentences[i]]
-    chunks.append(' '.join(current_chunk))
-
-    return chunks
+#The model to be used by encoding and querying
+model = SentenceTransformer(embedding_models[0], trust_remote_code=True) 
 
 
-def semantic_chunking(initial_chunks):
-    model = SentenceTransformer(embedding_models[1])
+def semantic_chunking(initial_chunks: list[str]) -> list[str]:
+    """
+    Joins similar chunks (sentences, paragraphs etc) together 
+    """
+    # model = SentenceTransformer(embedding_models[0])
     embeddings = model.encode(initial_chunks)
     
     semantic_chunks = []
@@ -61,9 +44,12 @@ def semantic_chunking(initial_chunks):
 
 
 
-def create_and_save_vectors(client, chunks, collection_name):
+def embed_and_save(collection : chromadb.Collection, chunks : list[str]) -> chromadb.Collection:
+    """
+    Encodes chunks and saves it in a collection (Vector database table)
+    """
+
     global CHUNK_ID
-    collection = client.get_or_create_collection(collection_name)
 
     data = {
         "chunks": [],
@@ -74,36 +60,60 @@ def create_and_save_vectors(client, chunks, collection_name):
     for chunk in chunks:
         data["chunks"].append(chunk)
         data["ids"].append(CHUNK_ID)
+        data["embeddings"].append(model.encode(chunk))
         CHUNK_ID += 1
 
-    print(data)
+    # print(data["chunks"], sep="\n")
+    # print(data["ids"])
 
     collection.add(
         documents= [chunk for chunk in data["chunks"]],
         ids=["id" + str(id) for id in data["ids"]],
-        embeddings
+        embeddings=[embedding for embedding in data["embeddings"]]
     )
 
-    return client
+    return collection
 
 
 
-def create_new_collection_with_data(client, collection_name):
+def embed_and_save_data(collection : chromadb.Collection) -> chromadb.Collection:
+    """
+    Reads data from the 5 data_i.json JSON files and embeds each paragraph,
+    chunks sentences together using semantic chunking, 
+    embeds department infor and employee info,
+    as well as meeting infos
+    """
 
     for i in range(1,6):
         
         with open(f"/home/jakobschiller/devour/data_extraction/vector-database/purchasing_departement/data_{i}.json", 'r') as file:
-            sentences = json.load(file)["sentences"]
+            data = json.load(file)
 
-        chunks = preprocess_summary(sentences)
-        client = create_and_save_vectors(client, chunks, collection_name)
-
-    return client
+        sentences = data['sentences']
 
 
-def query_vector_database(client, collection_name, query):
-    
+        employee_info =[' '.join(list(elem.values())) for elem in data["employee_info"]]
 
-    collection = client.get_collection(collection_name) # num_results is amount chunks that match to user query and will be outputted
-    result = collection.query(query_texts=query, n_results=7)
+        paragraphs = [elem.popitem()[1] for elem in data["paragraphs"]]
+
+        sentence_chunks = semantic_chunking(sentences)
+        # client = create_and_save_vectors(client, )
+        collection = embed_and_save(collection, [data["departement_info"]])
+        collection = embed_and_save(collection, employee_info)
+        collection = embed_and_save(collection, sentence_chunks)
+        collection = embed_and_save(collection, paragraphs)
+
+    return collection
+
+
+def query_vector_database(collection : chromadb.Collection, query_text : str) -> list[str]:
+    # collection = client.get_collection(collection_name) # num_results is amount chunks that match to user query and will be outputted
+    query_embedding = model.encode(query_text)
+    result = collection.query(query_embeddings=query_embedding, n_results=8)
+    # print(result["documents"], end="\n\n")
     return result['documents']
+
+
+def rank_results(results: chromadb.QueryResult ) -> list[str]:
+    
+    return results
