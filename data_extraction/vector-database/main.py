@@ -1,12 +1,16 @@
-from vectorise import create_new_collection_with_data
-import chromadb
+from vector_database import Database
 
-abteilungs_name = "purchasing_dept6"
+abteilungs_name = "Einkaufsabteilung"
 
-client = chromadb.PersistentClient(path="./chroma_db")
+path_to_db = "/home/jakobschiller/devour/data_extraction/vector-database/database"
 
-print(client.list_collections())
+einkaufs_db = Database(path_to_db, abteilungs_name)
 
-# client.get_or_create_collection(abteilungs_name).add()
+einkaufs_db.database.delete_collection(abteilungs_name)
 
-client = create_new_collection_with_data(client, abteilungs_name)
+einkaufs_db = Database(path_to_db, abteilungs_name)
+
+einkaufs_db.vectorise("/home/jakobschiller/devour/data_extraction/vector-database/purchasing_departement", 5)
+
+print(einkaufs_db.chunk_id, einkaufs_db.collection.count())
+
