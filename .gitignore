@@ -1,4 +1,5 @@
 chroma_db
+data_extraction/vector-database/database
 data_extraction/chroma/
 data_extraction/chroma_db/
 data_extraction/extraction_process/llm_venv/
