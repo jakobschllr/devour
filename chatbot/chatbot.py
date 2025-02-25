@@ -20,10 +20,10 @@ query_vector_database = module.query_vector_database
 
 
 class Chat:
-    def __init__(self, departement, user_name, user_role, collection_name, chroma_client, chat_context_limit):
+    def __init__(self, department, user_name, user_role, collection_name, chroma_client, chat_context_limit):
         self.chat_history = []
         self.chat_context = ""
-        self.departement = departement
+        self.department = department
         self.user_name = user_name
         self.user_role = user_role
         self.collection_name = collection_name
@@ -71,7 +71,7 @@ class Chat:
         
     def get_db_query(self, input, conversation_until_now):
         prompt = f"""
-        Erstelle aus der gegebenen Eingabe und den Kontextinformationen Eingabe aus wenigen prägnanten Schlüsselwörtern, der als Input in eine Vektor-Datenbank gegeben werden kann, sodass die relevanten
+        Erstelle aus der gegebenen Eingabe und den Kontextinformationen einen Satz, der als Input in eine Vektor-Datenbank gegeben werden kann, sodass die relevanten
         Informationen abgerufen werden können, die der Nutzer mit seiner Eingabe vermutlich haben wollte.
         Eingabe:
         {input}
@@ -109,7 +109,7 @@ class Chat:
         chunks = query_vector_database(self.collection, database_query)
 
         prompt = f"""
-        Du bist der KI-Assistent für {self.user_name} der als {self.user_role} in der Abteilung {self.departement} arbeitet. Beantworte die Nutzer-Anfrage basierend auf den gegebenen Informationen. Lass den Nutzer aber nicht wissen
+        Du bist der KI-Assistent für {self.user_name} der als {self.user_role} in der Abteilung {self.department} arbeitet. Beantworte die Nutzer-Anfrage basierend auf den gegebenen Informationen. Lass den Nutzer aber nicht wissen
         das du im Hintergrund diese Informationen mit erhälst. Beachte außerdem:
         Bisheriger Kontext zum Chat:
         {self.chat_context} 
@@ -159,11 +159,11 @@ class Chat:
         return filtered_text
 
 chat = Chat(
-    departement= "Einkauf",
+    department= "Einkauf",
     user_name= "Tom Weber",
     user_role= "Sachbearbeiter Einkauf",
-    collection_name= "purchasing_dept11",
-    chroma_client= "../data_extraction/vector-database/chroma_db",
+    collection_name= "Einkaufsabteilung",
+    chroma_client= "../data_extraction/vector-database/database",
     chat_context_limit = 5
 )
 
