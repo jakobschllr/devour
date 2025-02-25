@@ -4,7 +4,7 @@ import json
 import os
 from dotenv import load_dotenv
 
-DEPARTEMENT = "Einkauf"
+department = "Einkauf"
 
 def shorten_transcript(transcript_path):
 
@@ -36,8 +36,8 @@ def shorten_transcript(transcript_path):
         es im Abschnitt geht, daher müssen sie für sich alleine ohne Kontext anderer Labels den Inhalt des Abschnittes beschreiben.
         Die Values sollen immer der Fließtext des Abschnittes sein als String ohne weitere Verschachtelung.
 
-        Danach soll es immer einen Key geben, der immer "departement_info" heißt. Der dazugehörige Value kurzer Fließtext als String, der alle Informationen über die
-        Abteilung {DEPARTEMENT} nennt, die man aus dem Transkript über die Abteilung entnehmen kann.
+        Danach soll es immer einen Key geben, der immer "department_info" heißt. Der dazugehörige Value kurzer Fließtext als String, der alle Informationen über die
+        Abteilung {department} nennt, die man aus dem Transkript über die Abteilung entnehmen kann.
 
         Danach gibt es einen Key der immer "participants_info" heißt und dessen Value eine Liste ist. Die Liste soll für jeden im Meeting teilnehmenden Teilnehmer einen Text als
         String enthalten der den Namen des Mitarbeiters nennt, was generell seine Aufgaben sind, nicht nur im Bezug auf das Meeting und was seine Position im Unternehmen ist. Falls
@@ -57,7 +57,7 @@ def shorten_transcript(transcript_path):
             "detailliertes_label_für_abschnitt": "",
             "detailliertes_label_für_abschnitt": "",
             "detailliertes_label_für_abschnitt": "",
-            "departement_info": "",
+            "department_info": "",
             "participants_info": [],
             "meeting_info": {{
                 "date": "",

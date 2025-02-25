@@ -12,5 +12,5 @@ einkaufs_db = Database(path_to_db, abteilungs_name)
 
 einkaufs_db.vectorise("/home/jakobschiller/devour/data_extraction/vector-database/purchasing_departement", 5)
 
-print(einkaufs_db.chunk_id, einkaufs_db.collection.count())
+print(einkaufs_db.employee_info, einkaufs_db.collection.count())
 

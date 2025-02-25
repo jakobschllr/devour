@@ -1,34 +1,22 @@
 import ollama
 import requests
-#from vectorise import query_vector_database
+from vector_database.vector_database import Database
 import chromadb
 import re
 import json
 import os
 from dotenv import load_dotenv
 
-import importlib.util
-
-module_name = "../data_extraction.vector-database.vectorise"
-module_path = "../data_extraction/vector-database/vectorise.py"
-
-spec = importlib.util.spec_from_file_location(module_name, module_path)
-module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(module)
-
-query_vector_database = module.query_vector_database
-
 
 class Chat:
-    def __init__(self, department, user_name, user_role, collection_name, chroma_client, chat_context_limit):
+    def __init__(self, department, user_name, user_role, collection_name, db_path, chat_context_limit):
         self.chat_history = []
         self.chat_context = ""
         self.department = department
         self.user_name = user_name
         self.user_role = user_role
         self.collection_name = collection_name
-        self.chroma_client = chromadb.PersistentClient(chroma_client)
-        self.collection = self.chroma_client.get_collection(collection_name)
+        self.database = Database(db_path, collection_name)
 
         load_dotenv()
         self.GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
@@ -106,7 +94,7 @@ class Chat:
         user_input = input()
         database_query = self.get_db_query(user_input, last_chats)
 
-        chunks = query_vector_database(self.collection, database_query)
+        chunks = self.database.query_database(database_query)
 
         prompt = f"""
         Du bist der KI-Assistent für {self.user_name} der als {self.user_role} in der Abteilung {self.department} arbeitet. Beantworte die Nutzer-Anfrage basierend auf den gegebenen Informationen. Lass den Nutzer aber nicht wissen
@@ -158,13 +146,62 @@ class Chat:
 
         return filtered_text
 
+    def test_chat(self, query) -> str:
+
+        last_chats = self.load_recent_chat_history()
+        database_query = self.get_db_query(query, last_chats)
+
+        chunks = self.database.query_database(database_query)
+
+        prompt = f"""
+        Du bist der KI-Assistent für {self.user_name} der als {self.user_role} in der Abteilung {self.department} arbeitet. Beantworte die Nutzer-Anfrage basierend auf den gegebenen Informationen. Lass den Nutzer aber nicht wissen
+        das du im Hintergrund diese Informationen mit erhälst. Beachte außerdem:
+        Bisheriger Kontext zum Chat:
+        {self.chat_context} 
+        Bisheriger Gesprächsverlauf:
+        {last_chats}
+        Neue bereitgestellte Informationen: {chunks}
+        Neue Nutzer-Anfrage: {query}
+
+        Antworte im folgenden JSON-Format. Speichere die Antwort auf die Nutzer-Anfrage unter Berücksichtigung der letzten Chats, der bereitgestellten Informationen und des Kontextes beim Key "answer" als String. Ergänze den bisherigen Chat-Kontext um einen weiteren 
+        Satz, der wichtige neue Informationen aus dem Gespräch zusammenfasst und speichere ihn beim Key "context" als String. Fasse dich dabei sehr kurz. Sollten keine neuen Informationen dazugekommen sein, lass den String bei "context" bitte frei. Antworte ausschließlich mit der JSON-Datei.
+
+        {{
+            "answer": "",
+            "context": "",
+        }}
+
+        """
+
+        output = self.make_api_request(prompt)
+        output_json = json.loads(output.split('json')[1].replace('\n', '').replace("```", ""))
+
+        self.chat_context += output_json['context'] + " "
+        return output_json['answer']
+
+    def start_chat_test(self, queries):
+        answers = []
+        for query in queries:
+            answers.append(self.test_chat(query))
+            exchange = {
+                'prompt': query,
+                'answer': answers[-1]
+            }
+            self.chat_history.append(exchange)
+
+        return answers
+
+        
+
 chat = Chat(
     department= "Einkauf",
     user_name= "Tom Weber",
     user_role= "Sachbearbeiter Einkauf",
     collection_name= "Einkaufsabteilung",
-    chroma_client= "../data_extraction/vector-database/database",
+    chroma_client= "../vector_database/database",
     chat_context_limit = 5
 )
 
 chat.start_chat()
+
+
