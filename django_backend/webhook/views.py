@@ -7,6 +7,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.timezone import now
 from webhook.get_access_token import get_new_access_token
+from django.utils.dateparse import parse_datetime
 
 
 # Store the latest event for debugging purposes
@@ -22,20 +23,9 @@ AUTHORIZATION_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/author
 TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 
 
-# generates url where user is redirected to in order to login
-def get_authorization_url():
-    params = {
-        'client_id': CLIENT_ID,
-        'response_type': 'code',
-        'redirect_uri': REDIRECT_URI,
-        'scope': SCOPE
-    }
-    url = f"{AUTHORIZATION_URL}?{urlencode(params)}"
-    return url
-
 
 @csrf_exempt
-def webhook(request):
+def transcript_notification(request):
     """Handle Microsoft Graph API subscription notifications"""
     
     # Microsoft Graph validates webhook by sending a validationToken
@@ -93,3 +83,40 @@ def fetch_transcript(user_id, event_id):
     else:
         print("Error fetching transcript:", response.json())
         return None
+
+
+@csrf_exempt
+def lifecycle_notification(request):
+    if request.method == "POST":
+        try:
+            if(request.GET.get("validationToken", "")):
+                validation_token = request.GET.get("validationToken", "")
+                print(validation_token)
+                if validation_token:
+                    return HttpResponse(validation_token, content_type="text/plain", status=200)
+
+            # Parse the incoming JSON request body
+            data = json.loads(request.body)
+
+            # Extract the necessary fields from the request data
+            subscription_id = data.get('subscriptionId')
+            notification_type = data.get('notificationType')
+            expiration_date_time = data.get('expirationDateTime')
+            client_state = data.get('clientState')
+
+            # Parse the expiration date time to a Python datetime object
+            expiration_date_time = parse_datetime(expiration_date_time)
+
+
+
+            # You can add any custom logic here, like checking if the subscription is expiring soon
+            if(expiration_date_time - now() <= 5):
+                print("Subscription lauft bald ab") # mmake better logic for this 
+
+            return JsonResponse({"status": "success", "message": "Notification received successfully."}, status=202)
+
+        except Exception as e:
+            # Handle any errors and respond with an error message
+            return JsonResponse({"status": "error", "message": str(e)}, status=400)
+
+    return JsonResponse({"status": "error", "message": "Invalid request method."}, status=400)
