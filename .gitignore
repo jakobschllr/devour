@@ -4,9 +4,13 @@ data_extraction/chroma/
 data_extraction/chroma_db/
 data_extraction/extraction_process/llm_venv/
 **/.env
+**/*.pyc
+**/*.bin
+**/*.sqlite3
 /venv
 data_extraction/transcripts/
 data_extraction/extraction_templates/
 data_extraction/stopwords/
-vector-database/chroma_db
-vector-database/purchasing_departement/
+vector_database/chroma_db
+vector_database/purchasing_departement/
+certificate/
