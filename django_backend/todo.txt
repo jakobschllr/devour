@@ -1,0 +1,12 @@
+- Wenn User gelöscht wird, werden seine Chats noch nicht gelöscht.
+- Wenn User oder department gelöscht wird, müssen auch die microsoft teams subscription ids gelöscht werden
+- query prompt optimieren, Antwort soll ebenfalls JSON sein
+- finish method "store_ms_teams_tokens": add integration to subscription logic 
+
+
+Ablauf um bei neuem Transkript die Vektordatenbank zu trainieren:
+1. Microsoft schickt Transkript URL und subscriptions_id per Post Request
+2. Mit subscription_id die microsoft_transcriptions collection durchsuchen, um department_id und user_id zu bekommen
+3. Mit User_id kann aus der user collection der aktuelle refresh token geladen werden
+4. Mit Refresh token kann das Transkript über die Transkript URL gefetched werden
+5. Transkript auswerten und Inhalte in Vektordatenbank speichern.

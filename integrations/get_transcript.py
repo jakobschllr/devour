@@ -2,8 +2,7 @@ import requests
 import os
 from dotenv import load_dotenv
 from urllib.parse import urlencode
-from msgraph import GraphServiceClient
-from datetime import *
+
 
 
 load_dotenv()
@@ -18,6 +17,7 @@ TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 REFRESH_TOKEN = os.getenv('MS_REFRESH_TOKEN')
 
 # generates url where user is redirected to in order to login
+# DIESE METHODE MUSS INS FRONTEND
 def get_authorization_url():
     params = {
         'client_id': CLIENT_ID,
@@ -94,10 +94,12 @@ def get_transcript(access_token, url):
         return None
     
 # wenn refresh_token is expired get new refresh_token
-# auth_url = get_authorization_url()
-# print(auth_url)
+auth_url = get_authorization_url()
+print(auth_url)
 # authorization_token = input("Authorization token: ")
 # access_token, refresh_token = get_new_refresh_token(authorization_token)
+
+# print("Refresh: ", refresh_token)
 
 # # wenn refresh token noch gültig ist
 # # access_token = get_new_access_token()

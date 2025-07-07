@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 
+from corsheaders.defaults import default_headers
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -25,12 +27,24 @@ SECRET_KEY = 'django-insecure-4%et&-g#0pph_9o6a4dr_964k7%f1d!=uu9%3qs0@e!%p^8^!h
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['7e89-141-41-238-69.ngrok-free.app']
+ALLOWED_HOSTS = ['square-ideal-beagle.ngrok-free.app', 'eed6-141-41-238-69.ngrok-free.app', "localhost"]
 
+#CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "https://eed6-141-41-238-69.ngrok-free.app",
+    "https://square-ideal-beagle.ngrok-free.app"
+]
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "ngrok-skip-browser-warning",
+]
 
 # Application definition
 
 INSTALLED_APPS = [
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -39,10 +53,14 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'api',
-    'webhook'
+    'vector_database',
+    'ms_webhook',
+    'documents'
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

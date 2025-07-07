@@ -3,9 +3,8 @@ import time
 import os
 from dotenv import load_dotenv
 from urllib.parse import urlencode
-from msgraph import GraphServiceClient
 from get_transcript import get_new_access_token
-from datetime import *
+import base64
 
 # ms teams transcript documentation: https://learn.microsoft.com/en-us/graph/api/onlinemeeting-list-transcripts?view=graph-rest-1.0&tabs=python
 
@@ -18,6 +17,7 @@ REDIRECT_URI = 'https://www.google.de/callback' #"http://localhost:3000/callback
 SCOPE = "OnlineMeetingTranscript.Read.All Calendars.Read User.Read" # Berechtigungen die notwendig sind
 AUTHORIZATION_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
 TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+REFRESH2 = os.getenv('TEST_USER_R_TOKEN')
 
 # generates url where user is redirected to in order to login
 def get_authorization_url():
@@ -129,16 +129,34 @@ def get_meeting_transcripts(access_token, meeting_id):
         return None
 
 
+def load_cert():
+    cert_path = os.getenv("ENCRYPTION_CERTIFICATE_PATH")
 
-access_token = get_new_access_token()
+    if not cert_path or not os.path.exists(cert_path):
+        raise ValueError("Certificate file not found")
 
-user_info = get_user_info(access_token)
-user_id = user_info['id']
+    with open(cert_path, "r") as f:
+        cert_base64 = f.read().strip().replace("\n", "").replace("\r", "")
 
-print(user_id)
+    # Validate
+    try:
+        decoded_cert = base64.b64decode(cert_base64, validate=True)
+        print("Certificate loaded successfully!")
+        return cert_base64
+    except Exception as e:
+        print("Invalid Base64 certificate:", e)
 
-# meeting_info = get_meetings_info(access_token, user_id)
 
-# meeting_transcript = get_meeting_transcripts(access_token, meeting_id)
+# access_token = get_new_access_token(REFRESH2)
 
-print(subscribe_to_user(access_token, user_id, ENCRYPTION_CERTIFICATE, "My-Cert-123"))
+# user_info = get_user_info(access_token)
+# user_id = user_info['id']
+
+# print(user_id)
+
+# # meeting_info = get_meetings_info(access_token, user_id)
+
+# # meeting_transcript = get_meeting_transcripts(access_token, meeting_id)
+# cert = load_cert()
+
+# print(subscribe_to_user(access_token, user_id, cert, "My-Cert-124"))

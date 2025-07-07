@@ -13,8 +13,31 @@ client = genai.Client(api_key=GEMINI_API_KEY, http_options=types.HttpOptions(api
 path_to_scripts = "/home/jakobschiller/devour/data_extraction/transcripts/purchasing_departement/"
 
 def upload_trankripts(path, num=5):
+    files = []
     for i in range(1, num+1):
-        client.files.upload(path + str(i) + ".txt")
+        file = client.files.upload(path + str(i) + ".txt")
+    files.append(file)
+    return files
+
+def cache(file_uris : list):
+
+    types_part = [types.Part.from_uri(file_uri=file_uri, mime_type='application/txt') for file_uri in file_uris]
+    
+    cached_content = client.caches.create(
+    model='gemini-1.5-flash',
+    config=types.CreateCachedContentConfig(
+        contents=[
+            types.Content(
+                role='user',
+                parts=types_part,
+            )
+        ],
+        system_instruction='Here are the Transcripts of a different meetings of a department in a company',
+        display_name='transcripts',
+        ttl='3600s',
+    ),
+    )
+    return cached_content
 
 
 department= "Einkauf"
@@ -36,11 +59,11 @@ def generate_test_response(queries : list[str]):
     answers = chat.start_chat_test(queries)
     return answers
 
-def ai_responses(queries : list[str]):
+def ai_responses(queries : list[str], cached_content):
     
     for q in queries:
         prompt = f"""
-            Du bist der KI-Assistent für {user_name} der als {user_role} in der Abteilung {department} arbeitet. Beantworte die Nutzer-Anfrage basierend auf den gegebenen Informationen. Lass den Nutzer aber nicht wissen
+            Du bist der KI-Assistent für {user_name} der als {user_role} in der Abteilung {department} arbeitet. Beantworte die Nutzer-Anfrage basierend auf den Meeting Transkripts die dir gegben wurde. Lass den Nutzer aber nicht wissen
             das du im Hintergrund diese Informationen mit erhälst. Beachte außerdem:
             Den Kontext des Chats, und der 
             Neue Nutzer-Anfrage: {q}
@@ -54,6 +77,15 @@ def ai_responses(queries : list[str]):
             }}
 
             """
+        
+        response = client.models.generate_content(
+        model='gemini-1.5-flash',
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            cached_content=cached_content.name,
+        ),
+    )
+    print(response.text)
 
 # Function to evaluate response quality using an LLM
 def evaluate_response(query, generated_response, expected_response):

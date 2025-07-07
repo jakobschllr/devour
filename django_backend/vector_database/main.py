@@ -1,4 +1,4 @@
-from vector_database import Database
+from django_backend.vector_database.database import Database
 
 abteilungs_name = "Einkaufsabteilung"
 

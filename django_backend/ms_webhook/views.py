@@ -15,12 +15,19 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
-from ms_webhook.manage_token import get_new_access_token
+from mongo_models.models.department import DepartmentModel
+from ms_webhook.models.subscription import MicrosoftSubscription
+from ms_webhook.models.manage_token import get_new_access_token
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from mongo_models.models.integration import IntegrationModel
+from data_extraction.extraction_process.python_scripts.extractor import Extractor
 
 
 logging.basicConfig(filename='/home/jakobschiller/devour/backend_log/logfile.log', level=logging.INFO, 
                     format='%(asctime)s %(levelname)s %(message)s')
+
+mongo_host_port = 'mongodb://localhost:27017'
+ms_integration_model = IntegrationModel(mongo_host_port)
 
 load_dotenv()
 CLIENT_ID = os.getenv('AZURE_CLIENT_ID')
@@ -30,7 +37,7 @@ SCOPE = "OnlineMeetingTranscript.Read.All Calendars.Read User.Read OnlineMeeting
 AUTHORIZATION_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
 TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 PATH_TO_KEY = os.getenv('PATH_TO_KEY')
-PATH_TO_TRANSCRIPT = "/home/jakobschiller/devour/data_extraction/transcripts/purchasing_departement/"
+PATH_TO_TRANSCRIPT = os.getenv('PATH_TO_TRANSCRIPT')
 
 
 @csrf_exempt
@@ -82,7 +89,8 @@ def transcript_notification(request):
                         logging.info("Data Signature validated")
                         decrypted_data = decrypt_data(encrypted_data, decrypted_data_key)
                         transcript_data = json.loads(decrypted_data)
-                        save_transcript_to_file(transcript_data, get_access_token(subscription_id))
+                        save_transcript_to_database(transcript_data, subscription_id)
+                        # save_transcript_to_file(transcript_data, get_access_token(subscription_id))
                     else:
                         logging.warning("Data Signature verification failed")
                         raise Exception("Data Signature check failed")
@@ -97,6 +105,7 @@ def transcript_notification(request):
 
 
 def save_transcript_to_file(transcript_data, access_token):
+    logging.info("Saving Transcript to file")
 
     try:
         transcript_text = get_transcript(transcript_data, access_token)
@@ -105,7 +114,7 @@ def save_transcript_to_file(transcript_data, access_token):
         with open(PATH_TO_TRANSCRIPT + transcript_call_id + ".txt", 'w', encoding='utf-8') as file:
             file.write(transcript_text)
 
-        logging.info("Transcript Saved succesfuly")
+        logging.info("Transcript Saved succesfuly to file")
 
     except Exception as e:
         logging.info(f"Error occured while saving file {e}")
@@ -211,7 +220,7 @@ def lifecycle_notification(request):
 
             # Verifying the secret client code is correct 
             if not client_state == CLIENT_SECRET:
-                logging.info("Incorrect Client Secret")
+                logging.warning("Incorrect Client Secret")
                 return HttpResponse("Notification received", status=202)
 
             logging.info(f"""Got notification for Subscribtion :
@@ -221,7 +230,7 @@ def lifecycle_notification(request):
 
             if(lifecycle_event == "reauthorizationRequired"):
                 logging.info("Trying to renew Subscription")
-                isrenewed = renew_subscription(subscription_id, get_access_token(subscription_id))
+                isrenewed = renew_subscription(subscription_id)
                 if(isrenewed):
                     logging.info("Subscribtion renewed")
                     return HttpResponse("Subscribtion Renewed", status=202)
@@ -247,21 +256,25 @@ def lifecycle_notification(request):
     return HttpResponse("Notification Received.", status=200)
 
 
-def renew_subscription(subscription_id, access_token):
-    url = f"https://graph.microsoft.com/v1.0/subscriptions/{subscription_id}"
-    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
-    new_expiration_date = (datetime.now(timezone.utc) + timedelta(days=3)).replace(microsecond=0).isoformat()
-    data = {
-        "expirationDateTime": new_expiration_date
-    }
+def renew_subscription(subscription_id):
+    try:
+        access_token = get_access_token(subscription_id)
+        url = f"https://graph.microsoft.com/v1.0/subscriptions/{subscription_id}"
+        headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+        new_expiration_date = (datetime.now(timezone.utc) + timedelta(days=3)).replace(microsecond=0).isoformat()
+        data = {
+            "expirationDateTime": new_expiration_date
+        }
 
-    response = requests.patch(url, headers=headers, json=data)
-    if response.status_code == 200:
-        logging.info(f"Subscription renewed successfully! \nNew Date : {new_expiration_date}")
-        return True
-    else:
-        logging.info(f"Error renewing subscription: {response.text}")
-        return False
+        response = requests.patch(url, headers=headers, json=data)
+        if response.status_code == 200:
+            logging.info(f"Subscription renewed successfully! \nNew Date : {new_expiration_date}")
+            return True
+        else:
+            logging.error(f"Error renewing subscription: {response.text}")
+            return False
+    except Exception as e:
+        logging.error(str(e))
 
 
 def verify_signature(data, decryted_symmetric_key):
@@ -281,7 +294,7 @@ def verify_signature(data, decryted_symmetric_key):
         # Compare the signatures
         return hmac.compare_digest(signature, expected_signature)
     except Exception as e:
-        logging.info(f"Error verifying signature: {e}")
+        logging.info(f"Error verifying signature.")
         raise e
 
 
@@ -311,7 +324,7 @@ def get_transcript(transcript_data : json, access_token):
         else:
             raise Exception("Error fetching Transcript")
     except Exception as e:
-        logging.error(f"Error occurred while fetching transcript: {e}")
+        logging.error(f"Error occurred while fetching transcript")
         raise e
 
 
@@ -353,9 +366,61 @@ def is_validation_token_valid(app_ids, tenant_id, serialized_token):
         return False
 
 
-def get_access_token(subscription_id):
+def get_access_token(subscription_id : str):
     """
     Fetches the access Token from the database using the subscribtion id.
     """
-    #TODO Implement this method
-    return get_new_access_token()
+
+    try:
+
+        refresh_token_response = ms_integration_model.get_microsoft_refresh_token(subscription_id)
+
+        refresh_token = None
+
+        if(refresh_token_response['status'] == 'success'):
+            refresh_token = refresh_token_response['data']
+
+        else:
+            raise Exception("Refresh Token Not Found")
+
+
+        access_token = get_new_access_token(refresh_token)
+
+        logging.info("Access Token found")
+
+        return access_token
+
+    except Exception as e:
+        logging.error("Error While Getting Access Token")
+        raise e
+
+
+def save_transcript_to_database(transcript_data, subscription_id):
+    try:
+        access_token = get_access_token(subscription_id)
+        response = ms_integration_model.get_user_data(subscription_id)
+        if response['status'] != 'success':
+            logging.error("Subscribtion Id or Mongo DB error")
+            raise Exception("Subscribtion id error")
+        
+        department_id = response['data']['department_id']
+        department_model = DepartmentModel(mongo_host_port)
+        department_response = department_model.get_vector_db_data(department_id)
+        if department_response['status'] != 'success':
+            logging.error("Department model error")
+            raise Exception("Department Model Error")
+
+        department_data = department_response['data']
+        vector_db_path = department_data['vector_db_dir_path']
+        vector_db_collection = department_data['vector_db_collection']
+        extractor = Extractor(vector_db_path, vector_db_collection)
+        transcript_text = get_transcript(transcript_data, access_token)
+        extractor.extract(transcript_text)
+        extractor.add_to_db()
+
+    except Exception as e:
+        logging.error(str(e))
+        save_transcript_to_file(transcript_data, access_token)
+
+
+

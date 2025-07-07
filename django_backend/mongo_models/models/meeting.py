@@ -2,9 +2,9 @@ from pymongo import MongoClient
 from bson import ObjectId
 
 class MeetingModel:
-    def __init__(self):
+    def __init__(self, mongo_host_port):
         self.collection = "meetings"
-        self.client = MongoClient("mongodb://localhost:27017")
+        self.client = MongoClient(mongo_host_port)
         self.db = self.client["devour_database"]
         self.collection = self.db[self.collection]
 

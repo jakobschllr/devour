@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import logging
 import requests
 import os
 from dotenv import load_dotenv
@@ -68,10 +69,10 @@ class MicrosoftSubscription:
         }
         response = requests.post(url, json=data, headers=headers)
         if response.status_code == 201:
-            print("Subscription created successfully!")
+            logging.info(f"Subscription created successfully! {response.json()}")
             return response.json()
         else:
-            print(f"Error creating subscription: {response.text}")
+            logging.info(f"Error creating subscription: {response.text}")
             return None
 
 
@@ -84,16 +85,16 @@ class MicrosoftSubscription:
         :return: True if the subscription is deleted successfully, False otherwise.
         """
         if not subscription_id:
-            print("No subscription to delete.")
+            logging.info("No subscription to delete.")
             return None
         url = f"https://graph.microsoft.com/v1.0/subscriptions/{subscription_id}"
         headers = {"Authorization": f"Bearer {access_token}"}
         response = requests.delete(url, headers=headers)
         if response.status_code == 204:
-            print("Subscription deleted successfully!")
+            logging.info("Subscription deleted successfully!")
             return True
         else:
-            print(f"Error deleting subscription: {response.text}")
+            logging.error(f"Error deleting subscription: {response.text}")
             return False
 
 
@@ -114,5 +115,5 @@ class MicrosoftSubscription:
             decoded_cert = base64.b64decode(cert_base64, validate=True)
             return cert_base64
         except Exception as e:
-            print("Invalid Base64 certificate:", e)
+            logging.error("Invalid Base64 certificate:", e)
 

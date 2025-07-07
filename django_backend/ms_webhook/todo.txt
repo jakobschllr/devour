@@ -1,0 +1,11 @@
+Add certifications to encrypt notifications
+Handle callback 
+Code fur subscribtion verbessern (cleanen)
+Notification und subscribtion models erstellen und speichern
+tests fertig machen
+ngrok changing url automate
+subscription beim usererstellen erstellen
+automate subscriptions
+add validations for notifications
+add sha256 check for encoded data
+create mongoDB to manage/track stored files and ttranscript

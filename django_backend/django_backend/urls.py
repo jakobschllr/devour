@@ -22,5 +22,6 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/", include("api.urls")),
-    path("webhook/", include("webhook.urls")) # paths für api beginnen immer nach präfix "api/"
+    path("ms_webhook/", include("ms_webhook.urls")), # paths für api beginnen immer nach präfix "api/"
+    #path("upload_docs", include("documents.urls"))
 ]

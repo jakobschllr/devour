@@ -6,10 +6,7 @@ from dotenv import load_dotenv
 
 department = "Einkauf"
 
-def shorten_transcript(transcript_path):
-
-
-    transcript = get_transcript("" + transcript_path)
+def shorten_transcript(transcript):
 
     prompts = [
         f"""
@@ -135,23 +132,6 @@ def shorten_transcript(transcript_path):
     max_tokens = 16384
     top_p = 1.0 # only those next possible tokens are considered, whose cumulated probalities don't extend the top-p value 
 
-    # try:
-    #     response = ollama.chat(
-    #         model=models[4],
-    #         messages=[{"role": "user", "content": prompts[0]}],
-    #         options={
-    #             "temperature": temperature,
-    #             "top_p": top_p,
-    #             "num_predict": max_tokens,
-    #             "stream": False
-    #             }
-    #         )
-        
-    #     output = response["message"]["content"]
-    #     return output
-    
-    # except Exception as e:
-    #     print("Error: ", e)
 
     load_dotenv()
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
