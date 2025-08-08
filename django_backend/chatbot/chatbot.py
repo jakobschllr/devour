@@ -7,7 +7,7 @@ import json
 import os
 from dotenv import load_dotenv
 
-
+ 
 class Chat:
     def __init__(self, chat_history, chat_context, department, user_name, user_role,
                  individual_prompt, tone, user_context, chat_context_limit, collection_name, db_path):
@@ -71,9 +71,27 @@ class Chat:
         """
 
         query = self.make_api_request(prompt).lower()
-        print(query)
-
         return query
+    
+    def rethink_vector_db_output(self, user_prompt, query_to_vector_db, vector_db_results):
+        prompt = f"""
+        Bewerte ob die Antwort aus der Vektordatenbank passend ist, bzw. ob der Query gut war und die nötigen Informationen
+        gefunden wurden. Sollte dies nicht der Fall sein erstelle einen besseren Query mit dem die Vektordatenbank angesprochen werden kann.
+        Ein Nutzer hat folgenden Prompt abgeschickt:
+        {user_prompt}.
+        Um eine passende Antwort in der Vektordatenbank zu finden wurde diese mit diesem Query angefragt:
+        {query_to_vector_db}
+        Das sind die Ergebnisse aus der Vektordatenbank:
+        {vector_db_results}
+        Das ist der Kontext aus dem Chat:
+        {self.chat_context}
+
+        Antworte ausschließlich mit dem angepassten Query und mit nichts anderem. Wenn du den Query und die Ergebnisse aus der Vektordatenbank
+        gut findest, antworte einfach exakt wieder mitdemselben Query.
+        """
+        new_query = self.make_api_request(prompt).lower()
+        return new_query
+
 
     def prompt_model(self, user_prompt, generate_auto_title):
         answer, auto_title = self.get_answer(user_prompt, generate_auto_title)
@@ -85,22 +103,29 @@ class Chat:
         # load last five chats
         last_chats = self.load_recent_chat_history()
 
-        database_query = self.get_db_query(user_prompt, last_chats)
+        database_query_1 = self.get_db_query(user_prompt, last_chats)
+        vector_db_output_1 = self.database.query_database(database_query_1)
+        print("VectorDB Query 1: ", database_query_1)
+        print("VectorDB Output 1: ", vector_db_output_1)
 
-        chunks = self.database.query_database(database_query)
+        # think again
+        database_query_2 = self.rethink_vector_db_output(user_prompt, database_query_1, vector_db_output_1)
+        vector_db_output_2 = self.database.query_database(database_query_2)
 
+        print("VectorDB Query 2: ", database_query_2)
+        print("VectorDB Output 2: ", vector_db_output_2)
+
+        # Chatbot soll Titel vergeben für den Chat
         if generate_auto_title:
             prompt = f"""
             Du bist der KI-Assistent für {self.user_name} der als {self.user_role} in der Abteilung {self.department} arbeitet. Beantworte die Nutzer-Anfrage basierend auf den gegebenen Informationen. Lass den Nutzer aber nicht wissen
             das du im Hintergrund diese Informationen mit erhälst. Beachte außerdem:
 
-            Neue bereitgestellte Informationen: {chunks}
+            Neue bereitgestellte Informationen: {vector_db_output_2}
             Neue Nutzer-Anfrage: {user_prompt}
 
             Nutze diesen Ton: {self.tone}
             Individuelle Nutzer-Konfiguration: {self.individual_prompt}
-
-            
 
             Antworte im folgenden JSON-Format. Speichere die Antwort auf die Nutzer-Anfrage unter Berücksichtigung der bereitgestellten Informationen und des Kontextes über
             den User als String-Value beim key "answer". Erstelle außerdem einen einfachen kurzen Titel für den Chat und speichere ihn als String
@@ -113,7 +138,7 @@ class Chat:
             }}
 
             """
-        
+        # Chat hat bereits einen Titel
         else:
             prompt = f"""
             Du bist der KI-Assistent für {self.user_name} der als {self.user_role} in der Abteilung {self.department} arbeitet. Beantworte die Nutzer-Anfrage basierend auf den gegebenen Informationen. Lass den Nutzer aber nicht wissen
@@ -131,7 +156,7 @@ class Chat:
             Nutze diesen Ton: {self.tone}
             Beachte diese individuellen Nutzer-Konfigurationen: {self.individual_prompt}
 
-            Neue bereitgestellte Informationen: {chunks}
+            Neue bereitgestellte Informationen: {vector_db_output_2}
             Neue Nutzer-Anfrage: {user_prompt}
 
             Antworte im folgenden JSON-Format. Speichere die Antwort auf die Nutzer-Anfrage unter Berücksichtigung des bisherigen Gesprächsverlaufs,
@@ -143,20 +168,6 @@ class Chat:
             }}
 
             """
-
-            # Antworte im folgenden JSON-Format. Speichere die Antwort auf die Nutzer-Anfrage unter Berücksichtigung des bisherigen Gesprächsverlaufs,
-            # des Kontextes aus diesem Chat, des Kontextes über den User und der bereitgestellten Informationen als String-Value beim key "answer". Ergänze den bisherigen Chat-Kontext,
-            # um einen weiteren Satz, der wichtige neue Informationen über das Gespräch zusammenfasst und speichere ihn beim Key "chat_context" als String.
-            # Erängze den bisherigen User-Kontext, um einen weiteren Satz, der wichtige neue Informationen über den Nutzer enthält und speichere ihn beim Key "user_context"
-            # als String. Fasse dich dabei sehr kurz. Sollten für chat_context und user_context keine wesentlichen neuen Informationen dazugekommen sein, lasse
-            # die beiden Values in der JSON Datei einfach als leere Strings. Beachte auch den angegebenen Ton und die individuelle Nutzer-Konfiguration.
-            # Antworte ausschließlich mit der JSON-Datei.
-
-            # {{
-            #     "answer": "",
-            #     "chat_context": "",
-            #     "user_context": "",
-            # }}
 
         output = self.make_api_request(prompt)
         output_json = json.loads(output.split('json')[1].replace('\n', '').replace("```", ""))

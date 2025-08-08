@@ -1,16 +1,30 @@
+
+
+**/.env
+**/*.pyc
+**/*.bin
+
+# Virtual environment
+/venv
+
+
+**/__pycache__/
+# Text Docs
+data_extraction/transcripts/
+data_extraction/extraction_templates/
+data_extraction/docs/
+data_extraction/stopwords/
+
+# Security Certificates and Logs 
+certificate/
+backend_log/
+
+# Database Files 
 chroma_db
 vector-database/database
 data_extraction/chroma/
 data_extraction/chroma_db/
-data_extraction/extraction_process/llm_venv/
-**/.env
-**/*.pyc
-**/*.bin
 **/*.sqlite3
-/venv
-data_extraction/transcripts/
-data_extraction/extraction_templates/
-data_extraction/stopwords/
-vector_database/chroma_db
-vector_database/purchasing_departement/
-certificate/
+dbs
+department_vector_database/
+

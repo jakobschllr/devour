@@ -11,8 +11,11 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
-
 from corsheaders.defaults import default_headers
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -22,18 +25,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-4%et&-g#0pph_9o6a4dr_964k7%f1d!=uu9%3qs0@e!%p^8^!h'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['square-ideal-beagle.ngrok-free.app', 'eed6-141-41-238-69.ngrok-free.app', "localhost"]
+# changes everytime ngrok is restarted
+CURRENT_NGROK_HOST = os.getenv('CURRENT_NGROK_HOST')
+
+ALLOWED_HOSTS = ['square-ideal-beagle.ngrok-free.app', CURRENT_NGROK_HOST,  "localhost"]
 
 #CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "https://eed6-141-41-238-69.ngrok-free.app",
+    "https://" + CURRENT_NGROK_HOST,
     "https://square-ideal-beagle.ngrok-free.app"
 ]
 

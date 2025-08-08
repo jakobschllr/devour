@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+from typing import Optional
 from langchain_text_splitters import Language
 import requests
 import os
@@ -11,17 +12,17 @@ from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma.vectorstores import cosine_similarity
 
-
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 class Extractor:
     def __init__(self, path_to_db : str, collection_name : str):
         self.vector_db = Database(path_to_db, collection_name)
         self.employee_list : list[str] = self.get_mitarbeiter()
-        self.extracted_data : dict = None
-        self.parsed_data : dict = None
+        self.extracted_data : dict = {}
+        self.parsed_data : dict = {}
 
 
-    def get_sentences(text):
+    def get_sentences(self, text):
 
         text_splitter = RecursiveCharacterTextSplitter(separators=['.', '\n'], )
         sentences = text_splitter.split_text(text)
@@ -72,8 +73,8 @@ class Extractor:
 
             self.parsed_data = data_for_vector_db
 
-        except Exception as e:
-            raise e.add_note("Could not parse the extracted data into a json")
+        except json.JSONDecodeError as e:
+            raise e
 
     def summarise_transcript(self, transcript_text):
         try:
@@ -191,7 +192,7 @@ class Extractor:
 
     def make_api_request(self, text):
         
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.GEMINI_API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
         headers = {
             "Content-Type": "application/json"
